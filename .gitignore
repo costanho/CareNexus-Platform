@@ -1,0 +1,50 @@
+# Maven / Spring Boot
+target/
+*.jar
+*.war
+*.iml
+.idea/
+*.log
+*.class
+
+# OS / Environment
+.DS_Store
+Thumbs.db
+
+# Sensitive Config
+application-local.yml
+.env
+
+HELP.md
+target/
+.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+
+### STS ###
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+
+### IntelliJ IDEA ###
+.idea
+*.iws
+*.iml
+*.ipr
+
+### NetBeans ###
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+build/
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+### VS Code ###
+.vscode/
