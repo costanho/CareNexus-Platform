@@ -1,20 +1,16 @@
 package com.carenexus.direct.dto;
 
-import jakarta.persistence.Entity;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
-import lombok.Data;
-
-import java.time.LocalDateTime;
 import lombok.*;
 
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-@Entity
 public class MessageDTO {
+
     private Long id;
+    private Long appointmentId;
 
     @NotBlank(message = "Sender is required")
     private String sender;
@@ -22,11 +18,6 @@ public class MessageDTO {
     @NotBlank(message = "Recipient is required")
     private String recipient;
 
-    @NotBlank(message = "Message content cannot be empty")
+    @NotBlank(message = "Message cannot be empty")
     private String content;
-
-    @NotNull(message = "Appointment ID is required")
-    private Long appointmentId;
-
-    private LocalDateTime timestamp;
 }

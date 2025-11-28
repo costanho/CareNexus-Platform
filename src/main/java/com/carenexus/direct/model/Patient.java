@@ -8,8 +8,8 @@ import lombok.*;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-
 public class Patient {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -17,4 +17,8 @@ public class Patient {
     private String name;
     private String email;
     private String phone;
+
+    /** 🔥 Add this */
+    @Column(nullable = false)
+    private String userEmail;
 }

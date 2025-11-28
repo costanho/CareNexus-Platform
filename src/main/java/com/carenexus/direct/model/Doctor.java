@@ -9,6 +9,7 @@ import lombok.*;
 @AllArgsConstructor
 @Builder
 public class Doctor {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -17,4 +18,8 @@ public class Doctor {
     private String specialization;
     private String email;
     private String phone;
+
+    /** 🔥 Add this */
+    @Column(nullable = false)
+    private String userEmail; // owner from JWT
 }

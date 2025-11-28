@@ -4,29 +4,27 @@ import com.carenexus.direct.dto.AppointmentDTO;
 import com.carenexus.direct.model.Appointment;
 import com.carenexus.direct.model.Doctor;
 import com.carenexus.direct.model.Patient;
+import org.springframework.stereotype.Component;
 
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
-
+@Component
 public class AppointmentMapper {
 
-    public static AppointmentDTO toDto(Appointment appointment) {
-        AppointmentDTO dto = new AppointmentDTO();
-        dto.setId(appointment.getId());
-        dto.setDoctorId(appointment.getDoctor().getId());
-        dto.setPatientId(appointment.getPatient().getId());
-        dto.setAppointmentTime(appointment.getAppointmentTime()); // ✅ No need to format
-        dto.setReason(appointment.getReason());
-        return dto;
-    }
-
-    public static Appointment toEntity(AppointmentDTO dto, Doctor doctor, Patient patient) {
+    public static Appointment toEntity(AppointmentDTO dto, Doctor doctor, Patient patient, String userEmail) {
         return Appointment.builder()
                 .id(dto.getId())
+                .appointmentTime(dto.getAppointmentTime())
+                .reason(dto.getReason())
+                .userEmail(userEmail)
                 .doctor(doctor)
                 .patient(patient)
-                .appointmentTime(dto.getAppointmentTime()) // ✅ Directly use LocalDateTime
-                .reason(dto.getReason())
+                .build();
+    }
+
+    public static AppointmentDTO toDto(Appointment entity) {
+        return AppointmentDTO.builder()
+                .id(entity.getId())
+                .appointmentTime(entity.getAppointmentTime())
+                .reason(entity.getReason())
                 .build();
     }
 }

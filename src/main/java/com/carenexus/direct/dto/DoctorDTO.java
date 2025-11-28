@@ -10,7 +10,11 @@ import lombok.*;
 @AllArgsConstructor
 @Builder
 public class DoctorDTO {
+
     private Long id;
+
+    // ❌ removed userId — ownership comes from JWT, not from client
+    // private Long userId;
 
     @NotBlank(message = "Doctor name is required")
     @Size(min = 3, message = "Name must be at least 3 characters")

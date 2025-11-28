@@ -1,6 +1,5 @@
 package com.carenexus.direct.dto;
 
-
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import lombok.*;
@@ -10,6 +9,7 @@ import lombok.*;
 @AllArgsConstructor
 @Builder
 public class PatientDTO {
+
     private Long id;
 
     @NotBlank(message = "Patient name is required")
