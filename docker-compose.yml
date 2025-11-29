@@ -1,12 +1,95 @@
 version: "3.8"
 
-# CareNexus Multi-Service Orchestration
-# Services: MySQL Database, Auth Service (embedded), Direct Service
+# ====================================================================
+# CareNexus Multi-Service Orchestration (Phase 7 - Microservices)
+# ====================================================================
+# Services:
+#   - Zookeeper 2.13.x (Kafka dependency)
+#   - Kafka 3.2.x (Event bus)
+#   - MySQL 8.0 (Database for both services)
+#   - Auth Service (8082) - User authentication & JWT management
+#   - Direct Service (8081) - Patient/Doctor management
+#   - Adminer (8083) - Database UI
+#
 # Network: carenexus-net for inter-service communication
+# Event Bus: Kafka on port 9092
+#
+# Startup Order:
+# 1. Zookeeper starts (Kafka dependency)
+# 2. Kafka starts (depends on Zookeeper)
+# 3. MySQL starts (data persistence)
+# 4. Auth Service starts (depends on MySQL & Kafka)
+# 5. Direct Service starts (depends on MySQL, Kafka & Auth Service)
+# ====================================================================
 
 services:
   # ============================================================
+  # ZOOKEEPER - Kafka coordinator
+  # Port: 2181 (internal), 29181 (external for debugging)
+  # ============================================================
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.0
+    container_name: carenexus-zookeeper
+    restart: unless-stopped
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_SYNC_LIMIT: 2
+      ZOOKEEPER_INIT_LIMIT: 5
+      ZOOKEEPER_LOG4J_ROOT_LOGLEVEL: WARN
+    ports:
+      - "29181:2181"  # For external debugging
+    networks:
+      - carenexus-net
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ============================================================
+  # KAFKA BROKER - Event bus for async messaging
+  # Port: 9092 (internal), 9101 (metrics)
+  # Depends on: Zookeeper
+  # ============================================================
+  kafka:
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: carenexus-kafka
+    restart: unless-stopped
+    depends_on:
+      - zookeeper
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_LOG_RETENTION_HOURS: 168  # 7 days
+      KAFKA_LOG_SEGMENT_BYTES: 1073741824  # 1GB
+      KAFKA_METRICS_NUM_SAMPLES: 3
+      KAFKA_METRICS_SAMPLE_WINDOW_MS: 30000
+      KAFKA_LOG4J_ROOT_LOGLEVEL: WARN
+    ports:
+      - "9092:9092"   # Kafka broker
+      - "9101:9101"   # JMX metrics port
+    networks:
+      - carenexus-net
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    healthcheck:
+      test: ["CMD", "kafka-broker-api-versions.sh", "--bootstrap-server", "localhost:9092"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  # ============================================================
   # DATABASE SERVICE - MySQL 8.0 with persistence
+  # Database: carenexus_auth (Auth Service) + carenexus_direct (Direct Service)
   # ============================================================
   mysql-db:
     image: mysql:8.0
@@ -14,9 +97,13 @@ services:
     restart: unless-stopped
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-rootpassword}
+      # Primary database for Direct Service
       MYSQL_DATABASE: ${MYSQL_DATABASE:-carenexus_direct}
+      # Application user
       MYSQL_USER: ${MYSQL_USER:-appuser}
       MYSQL_PASSWORD: ${MYSQL_PASSWORD:-apppassword}
+      # Disable binary logging for development (reduces I/O)
+      MYSQL_INITDB_SKIP_TZINFO: 1
     ports:
       - "${MYSQL_PORT:-3307}:3306"
     volumes:
@@ -37,8 +124,61 @@ services:
         max-file: "3"
 
   # ============================================================
-  # DIRECT SERVICE - Patient/Doctor management with embedded Auth
-  # Port: 8081, Depends on: MySQL
+  # AUTH SERVICE - User authentication & JWT management
+  # Port: 8082, Depends on: MySQL, Kafka
+  # ============================================================
+  auth-service:
+    build:
+      context: ./
+      dockerfile: ../auth-service/Dockerfile
+    container_name: carenexus-auth-service
+    restart: unless-stopped
+    depends_on:
+      mysql-db:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    environment:
+      # Spring Configuration
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_APPLICATION_NAME: auth-service
+
+      # Database Configuration (Auth database)
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql-db:3306/carenexus_auth?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      SPRING_DATASOURCE_USERNAME: ${MYSQL_USER:-appuser}
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_PASSWORD:-apppassword}
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+
+      # Kafka Configuration (Event bus)
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+
+      # JWT Configuration
+      JWT_SECRET: ${JWT_SECRET:-U29tZVN1cGVyU2VjdXJlSldUU2VjcmV0S2V5MTIzNCE=}
+      JWT_ACCESS_EXPIRATION: ${JWT_ACCESS_EXPIRATION:-86400000}
+      JWT_REFRESH_EXPIRATION: ${JWT_REFRESH_EXPIRATION:-604800000}
+
+      # Java Memory Configuration
+      JAVA_TOOL_OPTIONS: "-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0"
+
+    ports:
+      - "${AUTH_SERVICE_PORT:-8082}:8082"
+    networks:
+      - carenexus-net
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "5"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8082/api/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # ============================================================
+  # DIRECT SERVICE - Patient/Doctor management
+  # Port: 8081, Depends on: MySQL, Kafka, Auth Service
   # ============================================================
   direct-service:
     build:
@@ -49,21 +189,31 @@ services:
     depends_on:
       mysql-db:
         condition: service_healthy
+      kafka:
+        condition: service_healthy
+      auth-service:
+        condition: service_healthy
     environment:
       # Spring Configuration
       SPRING_PROFILES_ACTIVE: docker
       SPRING_APPLICATION_NAME: direct-service
 
-      # Database Configuration
+      # Database Configuration (Direct Service database)
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql-db:3306/${MYSQL_DATABASE:-carenexus_direct}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
       SPRING_DATASOURCE_USERNAME: ${MYSQL_USER:-appuser}
       SPRING_DATASOURCE_PASSWORD: ${MYSQL_PASSWORD:-apppassword}
       SPRING_JPA_HIBERNATE_DDL_AUTO: update
 
-      # JWT Configuration (Auth Service)
+      # Kafka Configuration (Event bus)
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+
+      # JWT Configuration (for token validation)
       JWT_SECRET: ${JWT_SECRET:-U29tZVN1cGVyU2VjdXJlSldUU2VjcmV0S2V5MTIzNCE=}
       JWT_EXPIRATION: ${JWT_EXPIRATION:-86400000}
       JWT_REFRESH_EXPIRATION: ${JWT_REFRESH_EXPIRATION:-604800000}
+
+      # Inter-Service Communication (Auth Service)
+      AUTH_SERVICE_URL: ${AUTH_SERVICE_URL:-http://auth-service:8082}
 
       # Java Memory Configuration
       JAVA_TOOL_OPTIONS: "-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0"
@@ -86,7 +236,7 @@ services:
 
   # ============================================================
   # ADMINER - Optional database management UI
-  # Access: http://localhost:8080
+  # Access: http://localhost:8083
   # ============================================================
   adminer:
     image: adminer
@@ -95,7 +245,7 @@ services:
     depends_on:
       - mysql-db
     ports:
-      - "${ADMINER_PORT:-8082}:8080"
+      - "${ADMINER_PORT:-8083}:8080"
     networks:
       - carenexus-net
     environment:

@@ -400,7 +400,7 @@ Much faster! ⚡
 
 This guide has everything you need. When stuck:
 1. **Check the relevant reference file** (COMMANDS_REFERENCE.md, BACKEND_STRUCTURE.md, etc.)
-2. **Check troubleshooting section** above
+2. **Check troubleshooting ook section** above
 3. **Look at existing code patterns** in `src/` directories
 4. **Test with curl** to isolate problems
 
