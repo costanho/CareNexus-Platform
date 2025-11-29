@@ -1,5 +1,26 @@
 package com.carenexus.auth.controller;
 
+/**
+ * ====================================================================
+ * DEPRECATED: EMBEDDED AUTH DISABLED
+ * ====================================================================
+ *
+ * This controller is DISABLED in microservice mode.
+ * All auth endpoints have been moved to AUTH SERVICE (port 8082).
+ *
+ * DISABLED ENDPOINTS (now in Auth Service):
+ * - POST /api/auth/register    → Auth Service handles
+ * - POST /api/auth/login       → Auth Service handles
+ * - POST /api/auth/refresh-token → Auth Service handles
+ * - GET  /api/auth/me          → Auth Service handles
+ *
+ * Direct Service no longer embeds authentication logic.
+ * Use AuthServiceClient to call Auth Service for user operations.
+ *
+ * ====================================================================
+ */
+
+/*
 import com.carenexus.auth.dto.LoginRequest;
 import com.carenexus.auth.dto.AuthResponse;
 import com.carenexus.auth.dto.RefreshTokenRequest;
@@ -23,34 +44,34 @@ public class AuthController {
     private final UserRepository userRepository;
     private final JwtService jwtService;
 
-    /** 🔹 Register a new user */
+    // 🔹 Register a new user
     @PostMapping("/register")
     public ResponseEntity<AuthResponse> register(@RequestBody User user) {
         AuthResponse response = authService.register(user);
         return ResponseEntity.ok(response);
     }
 
-    /** 🔹 Login & return tokens */
+    // 🔹 Login & return tokens
     @PostMapping("/login")
     public ResponseEntity<AuthResponse> login(@RequestBody LoginRequest request) {
         AuthResponse response = authService.login(request.getEmail(), request.getPassword());
         return ResponseEntity.ok(response);
     }
 
-    /** 🔹 Refresh access token */
+    // 🔹 Refresh access token
     @PostMapping("/refresh-token")
     public ResponseEntity<AuthResponse> refreshToken(@RequestBody RefreshTokenRequest request) {
         AuthResponse response = authService.refreshToken(request.getRefreshToken());
         return ResponseEntity.ok(response);
     }
 
-    /** 🔒 Protected test endpoint */
+    // 🔒 Protected test endpoint
     @GetMapping("/test")
     public ResponseEntity<String> testEndpoint() {
         return ResponseEntity.ok("Protected endpoint accessed!");
     }
 
-    /** 🔒 Get currently authenticated user info */
+    // 🔒 Get currently authenticated user info
     @GetMapping("/me")
     public ResponseEntity<UserInfoResponse> getCurrentUser(Principal principal) {
         if (principal == null) {
@@ -72,3 +93,4 @@ public class AuthController {
     }
 
 }
+*/

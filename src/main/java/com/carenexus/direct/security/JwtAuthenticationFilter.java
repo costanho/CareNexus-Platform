@@ -1,5 +1,25 @@
 package com.carenexus.direct.security;
 
+/**
+ * ====================================================================
+ * DEPRECATED: JWT FILTER DISABLED - MICROSERVICE MODE
+ * ====================================================================
+ *
+ * This filter is DISABLED in microservice mode.
+ * Token validation now happens at Auth Service level.
+ *
+ * In production, an API Gateway will:
+ * 1. Intercept all requests
+ * 2. Validate JWT with Auth Service
+ * 3. Forward only authenticated requests to Direct Service
+ * 4. Add user context headers to requests
+ *
+ * Direct Service trusts that API Gateway has validated the token.
+ *
+ * ====================================================================
+ */
+
+/*
 import com.carenexus.auth.model.User;
 import com.carenexus.auth.repository.UserRepository;
 import com.carenexus.auth.security.JwtService;
@@ -89,3 +109,4 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         filterChain.doFilter(request, response);
     }
 }
+*/
